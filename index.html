@@ -1,0 +1,977 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HYPER | Premium UFC Fight Gear</title>
+    <script src="https://unpkg.com/three@0.137.0/build/three.min.js"></script>
+    <script src="https://unpkg.com/react@17/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/three@0.137.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://unpkg.com/three@0.137.0/examples/js/controls/OrbitControls.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Rajdhani', sans-serif;
+            background: #000;
+            color: #fff;
+            overflow-x: hidden;
+        }
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: 1;
+        }
+        .content {
+            position: relative;
+            z-index: 2;
+        }
+        .gradient-text {
+            background: linear-gradient(45deg, #ff0000, #ff6b6b);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .product-model-view {
+            height: 400px;
+            width: 100%;
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .loading-indicator {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0,0,0,0.5);
+        }
+        .mobile-menu {
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+        .mobile-menu.active {
+            transform: translateX(0);
+        }
+        .product-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .product-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 25px -5px rgba(255, 0, 0, 0.1), 0 10px 10px -5px rgba(255, 0, 0, 0.04);
+        }
+        .cart-panel {
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+        .cart-panel.active {
+            transform: translateX(0);
+        }
+        .parallax {
+            position: relative;
+            overflow: hidden;
+        }
+        .parallax-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 130%;
+            background-position: center;
+            background-size: cover;
+            z-index: -1;
+            transform: translateY(0);
+            transition: transform 0.1s ease-out;
+        }
+        .product-canvas {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    
+    <div class="content">
+        <nav class="fixed w-full bg-black bg-opacity-80 backdrop-blur-sm z-50">
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="flex justify-between items-center py-4">
+                    <a href="#" class="text-3xl font-bold gradient-text">HYPER</a>
+                    <div class="hidden md:flex space-x-8">
+                        <a href="#shop" class="text-white hover:text-red-500 transition duration-300">Shop</a>
+                        <a href="#shorts" class="text-white hover:text-red-500 transition duration-300">Fight Shorts</a>
+                        <a href="#gloves" class="text-white hover:text-red-500 transition duration-300">Gloves</a>
+                        <a href="#about" class="text-white hover:text-red-500 transition duration-300">About</a>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <button class="text-white hover:text-red-500 transition duration-300" id="search-btn">
+                            <i class="bi bi-search text-xl"></i>
+                        </button>
+                        <button class="text-white hover:text-red-500 transition duration-300" id="cart-btn">
+                            <i class="bi bi-cart text-xl"></i>
+                            <span id="cart-count" class="inline-block bg-red-600 text-white text-xs rounded-full px-2 py-1 ml-1">0</span>
+                        </button>
+                        <button class="md:hidden text-white hover:text-red-500 transition duration-300" id="menu-btn">
+                            <i class="bi bi-list text-2xl"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Mobile Menu -->
+        <div class="mobile-menu fixed top-0 left-0 w-full h-full bg-black bg-opacity-95 z-50 md:hidden flex flex-col p-8">
+            <div class="flex justify-end mb-8">
+                <button id="close-menu-btn" class="text-white">
+                    <i class="bi bi-x text-4xl"></i>
+                </button>
+            </div>
+            <div class="flex flex-col space-y-6 text-center">
+                <a href="#shop" class="text-2xl text-white hover:text-red-500">Shop</a>
+                <a href="#shorts" class="text-2xl text-white hover:text-red-500">Fight Shorts</a>
+                <a href="#gloves" class="text-2xl text-white hover:text-red-500">Gloves</a>
+                <a href="#about" class="text-2xl text-white hover:text-red-500">About</a>
+            </div>
+        </div>
+
+        <!-- Cart Panel -->
+        <div class="cart-panel fixed top-0 right-0 w-full md:w-1/3 h-full bg-black bg-opacity-95 z-50 p-6 overflow-y-auto">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold gradient-text">Your Cart</h2>
+                <button id="close-cart-btn" class="text-white">
+                    <i class="bi bi-x text-3xl"></i>
+                </button>
+            </div>
+            <div id="cart-items" class="mb-6">
+                <!-- Cart items will be dynamically added here -->
+                <p class="text-gray-400 text-center py-8 cart-empty-message">Your cart is empty</p>
+            </div>
+            <div id="cart-summary" class="border-t border-gray-800 pt-4 hidden">
+                <div class="flex justify-between mb-2">
+                    <span>Subtotal:</span>
+                    <span id="cart-subtotal">$0.00</span>
+                </div>
+                <div class="flex justify-between mb-4">
+                    <span>Shipping:</span>
+                    <span>$9.99</span>
+                </div>
+                <div class="flex justify-between font-bold mb-6">
+                    <span>Total:</span>
+                    <span id="cart-total">$0.00</span>
+                </div>
+                <button id="checkout-btn" class="w-full bg-red-600 text-white py-3 rounded-full hover:bg-red-700 transition">
+                    Checkout
+                </button>
+            </div>
+        </div>
+
+        <!-- Search Panel -->
+        <div id="search-panel" class="fixed top-0 left-0 w-full h-full bg-black bg-opacity-95 z-50 p-6 flex flex-col items-center justify-start pt-20 hidden">
+            <div class="w-full max-w-2xl">
+                <div class="flex justify-between items-center mb-8">
+                    <h2 class="text-2xl font-bold gradient-text">Search Products</h2>
+                    <button id="close-search-btn" class="text-white">
+                        <i class="bi bi-x text-3xl"></i>
+                    </button>
+                </div>
+                <div class="relative">
+                    <input type="text" id="search-input" class="w-full bg-gray-900 border border-gray-800 rounded-full px-6 py-3 text-white focus:outline-none focus:border-red-500" placeholder="Search for shorts, gloves...">
+                    <button class="absolute right-4 top-3 text-gray-400">
+                        <i class="bi bi-search text-xl"></i>
+                    </button>
+                </div>
+                <div id="search-results" class="mt-6">
+                    <!-- Search results will be dynamically added here -->
+                </div>
+            </div>
+        </div>
+
+        <main>
+            <section class="h-screen flex items-center justify-center relative overflow-hidden">
+                <div class="parallax-bg" style="background-image: url('https://firebasestorage.googleapis.com/v0/b/widecanvas-d0dd4.appspot.com/o/additional-images%2Fhyper%20.jpg?alt=media&token=95b4e7d5-323f-4eec-8775-4919168ec823'); opacity: 0.5;"></div>
+                <div class="text-center px-4 z-10">
+                    <h1 class="text-6xl md:text-8xl font-bold mb-4 gradient-text">HYPER FIGHT GEAR</h1>
+                    <p class="text-xl md:text-2xl mb-8">Premium UFC Fight Shorts & Gloves</p>
+                    <a href="#shop" class="bg-red-600 text-white px-8 py-3 rounded-full hover:bg-red-700 transition">Shop Now</a>
+                </div>
+            </section>
+
+            <section id="shop" class="py-20 bg-black">
+                <div class="max-w-7xl mx-auto px-4">
+                    <h2 class="text-4xl font-bold mb-4 text-center gradient-text">Featured Products</h2>
+                    <p class="text-center text-gray-400 mb-12">Premium quality fight gear for champions</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        <!-- Product cards will be dynamically generated here -->
+                    </div>
+                </div>
+            </section>
+
+            <section class="py-16 bg-gray-900">
+                <div class="max-w-7xl mx-auto px-4">
+                    <div class="flex flex-col md:flex-row items-center">
+                        <div class="md:w-1/2 mb-10 md:mb-0">
+                            <div class="product-model-view">
+                                <canvas id="featured-product-canvas"></canvas>
+                                <div class="loading-indicator" id="featured-product-loader">
+                                    <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="md:w-1/2 md:pl-12">
+                            <h2 class="text-4xl font-bold mb-4 gradient-text">Pro Series Fight Shorts</h2>
+                            <p class="text-gray-400 mb-6">Engineered for maximum performance in the octagon. Our premium fight shorts feature advanced four-way stretch material, reinforced stitching, and a patented comfort waistband system.</p>
+                            <ul class="mb-6 space-y-2">
+                                <li class="flex items-center"><i class="bi bi-check-circle-fill text-red-500 mr-2"></i> Lightweight & durable</li>
+                                <li class="flex items-center"><i class="bi bi-check-circle-fill text-red-500 mr-2"></i> Enhanced mobility design</li>
+                                <li class="flex items-center"><i class="bi bi-check-circle-fill text-red-500 mr-2"></i> Sweat-wicking technology</li>
+                                <li class="flex items-center"><i class="bi bi-check-circle-fill text-red-500 mr-2"></i> UFC regulation compliant</li>
+                            </ul>
+                            <div class="flex space-x-4 mb-6">
+                                <button class="size-option border border-gray-700 px-4 py-2 rounded hover:border-red-500 focus:outline-none focus:border-red-500">S</button>
+                                <button class="size-option border border-gray-700 px-4 py-2 rounded hover:border-red-500 focus:outline-none focus:border-red-500">M</button>
+                                <button class="size-option border border-gray-700 px-4 py-2 rounded hover:border-red-500 focus:outline-none focus:border-red-500">L</button>
+                                <button class="size-option border border-gray-700 px-4 py-2 rounded hover:border-red-500 focus:outline-none focus:border-red-500">XL</button>
+                            </div>
+                            <div class="flex items-center space-x-4">
+                                <span class="text-2xl font-bold">$89.99</span>
+                                <button class="bg-red-600 text-white px-6 py-3 rounded-full hover:bg-red-700 transition">Add to Cart</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="shorts" class="py-20 bg-black">
+                <div class="max-w-7xl mx-auto px-4">
+                    <h2 class="text-4xl font-bold mb-4 text-center gradient-text">Fight Shorts Collection</h2>
+                    <p class="text-center text-gray-400 mb-12">Designed for fighters who demand the best</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="shorts-container">
+                        <!-- Shorts products will be dynamically generated here -->
+                    </div>
+                </div>
+            </section>
+
+            <section class="py-16 relative overflow-hidden">
+                <div class="parallax-bg" style="background-image: url('https://firebasestorage.googleapis.com/v0/b/widecanvas-d0dd4.appspot.com/o/additional-images%2Fhyper%20gloves.jpg?alt=media&token=a21bf3fc-b861-40ed-9705-ca92d91c45ba'); opacity: 0.3;"></div>
+                <div class="max-w-7xl mx-auto px-4 relative z-10">
+                    <div class="text-center max-w-3xl mx-auto">
+                        <h2 class="text-4xl font-bold mb-4 gradient-text">CRAFTED FOR CHAMPIONS</h2>
+                        <p class="text-xl mb-10">Every HYPER product is designed and tested by professional fighters</p>
+                        <a href="#gloves" class="bg-red-600 text-white px-8 py-3 rounded-full hover:bg-red-700 transition">Explore Gloves</a>
+                    </div>
+                </div>
+            </section>
+
+            <section id="gloves" class="py-20 bg-black">
+                <div class="max-w-7xl mx-auto px-4">
+                    <h2 class="text-4xl font-bold mb-4 text-center gradient-text">Premium Gloves</h2>
+                    <p class="text-center text-gray-400 mb-12">Superior protection and performance</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="gloves-container">
+                        <!-- Gloves products will be dynamically generated here -->
+                    </div>
+                </div>
+            </section>
+
+            <section class="py-16 bg-gray-900">
+                <div class="max-w-7xl mx-auto px-4">
+                    <div class="flex flex-col md:flex-row items-center">
+                        <div class="md:w-1/2 md:pr-12 mb-10 md:mb-0">
+                            <h2 class="text-4xl font-bold mb-4 gradient-text">Elite Series Gloves</h2>
+                            <p class="text-gray-400 mb-6">Our Elite Series gloves provide superior protection and precise striking capability. Engineered with advanced impact absorption technology and premium leather construction.</p>
+                            <ul class="mb-6 space-y-2">
+                                <li class="flex items-center"><i class="bi bi-check-circle-fill text-red-500 mr-2"></i> Advanced impact protection</li>
+                                <li class="flex items-center"><i class="bi bi-check-circle-fill text-red-500 mr-2"></i> Ergonomic wrist support</li>
+                                <li class="flex items-center"><i class="bi bi-check-circle-fill text-red-500 mr-2"></i> Premium leather construction</li>
+                                <li class="flex items-center"><i class="bi bi-check-circle-fill text-red-500 mr-2"></i> UFC regulation approved</li>
+                            </ul>
+                            <div class="flex space-x-4 mb-6">
+                                <button class="weight-option border border-gray-700 px-4 py-2 rounded hover:border-red-500 focus:outline-none focus:border-red-500">4oz</button>
+                                <button class="weight-option border border-gray-700 px-4 py-2 rounded hover:border-red-500 focus:outline-none focus:border-red-500">6oz</button>
+                                <button class="weight-option border border-gray-700 px-4 py-2 rounded hover:border-red-500 focus:outline-none focus:border-red-500">8oz</button>
+                                <button class="weight-option border border-gray-700 px-4 py-2 rounded hover:border-red-500 focus:outline-none focus:border-red-500">10oz</button>
+                            </div>
+                            <div class="flex items-center space-x-4">
+                                <span class="text-2xl font-bold">$129.99</span>
+                                <button class="bg-red-600 text-white px-6 py-3 rounded-full hover:bg-red-700 transition">Add to Cart</button>
+                            </div>
+                        </div>
+                        <div class="md:w-1/2">
+                            <div class="product-model-view">
+                                <canvas id="featured-gloves-canvas"></canvas>
+                                <div class="loading-indicator" id="featured-gloves-loader">
+                                    <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-500"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="about" class="py-20 bg-black">
+                <div class="max-w-7xl mx-auto px-4">
+                    <div class="flex flex-col lg:flex-row">
+                        <div class="lg:w-1/2 mb-10 lg:mb-0 lg:pr-12">
+                            <h2 class="text-4xl font-bold mb-4 gradient-text">About HYPER</h2>
+                            <p class="text-gray-400 mb-6">Founded by fighters, for fighters. HYPER is dedicated to creating the highest quality fight gear made for professional UFC athletes and serious practitioners.</p>
+                            <p class="text-gray-400 mb-6">Our team consists of former UFC fighters, coaches, and textile engineers who understand what it takes to perform at the highest level. We rigorously test all of our products to ensure they meet the demands of championship competition.</p>
+                            <div class="grid grid-cols-2 gap-6 mb-8">
+                                <div>
+                                    <h3 class="text-xl font-bold mb-2">Quality Materials</h3>
+                                    <p class="text-gray-400">Only premium materials that withstand intense training and competition</p>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-bold mb-2">Performance Focused</h3>
+                                    <p class="text-gray-400">Engineered to enhance your performance in the octagon</p>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-bold mb-2">Fighter Tested</h3>
+                                    <p class="text-gray-400">Developed with input from professional UFC fighters</p>
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-bold mb-2">Global Shipping</h3>
+                                    <p class="text-gray-400">Delivering premium fight gear worldwide</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="lg:w-1/2">
+                            <div class="rounded-lg overflow-hidden">
+                                <img src="https://firebasestorage.googleapis.com/v0/b/widecanvas-d0dd4.appspot.com/o/additional-images%2Fhyper%20.jpg?alt=media&token=95b4e7d5-323f-4eec-8775-4919168ec823" alt="HYPER Fight Gear" class="w-full h-auto rounded-lg">
+                            </div>
+                            <div class="mt-6 grid grid-cols-3 gap-4">
+                                <div class="flex items-center justify-center">
+                                    <div class="text-center">
+                                        <h4 class="text-3xl font-bold gradient-text">5+</h4>
+                                        <p class="text-sm text-gray-400">Years Experience</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-center">
+                                    <div class="text-center">
+                                        <h4 class="text-3xl font-bold gradient-text">12+</h4>
+                                        <p class="text-sm text-gray-400">UFC Partners</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-center">
+                                    <div class="text-center">
+                                        <h4 class="text-3xl font-bold gradient-text">10K+</h4>
+                                        <p class="text-sm text-gray-400">Happy Fighters</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="py-16 bg-gray-900">
+                <div class="max-w-7xl mx-auto px-4">
+                    <h2 class="text-4xl font-bold mb-8 text-center gradient-text">Join The HYPER Community</h2>
+                    <div class="max-w-md mx-auto">
+                        <p class="text-center text-gray-400 mb-6">Sign up for exclusive deals, new product launches and fighting tips</p>
+                        <form class="flex flex-col sm:flex-row gap-4 mb-6">
+                            <input type="email" placeholder="Your email address" class="flex-1 bg-gray-800 border border-gray-700 text-white px-4 py-3 rounded-full focus:outline-none focus:border-red-500">
+                            <button type="submit" class="bg-red-600 text-white px-6 py-3 rounded-full hover:bg-red-700 transition">Subscribe</button>
+                        </form>
+                        <p class="text-xs text-center text-gray-500">By subscribing, you agree to our Privacy Policy and consent to receive updates from our company.</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="bg-black py-12 border-t border-gray-900">
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-10">
+                    <div>
+                        <h3 class="text-xl font-bold gradient-text mb-6">HYPER</h3>
+                        <p class="text-gray-400 mb-6">Premium UFC Fight Gear for champions and professional athletes.</p>
+                        <div class="flex space-x-4">
+                            <a href="#" class="text-gray-400 hover:text-red-500"><i class="bi bi-instagram text-xl"></i></a>
+                            <a href="#" class="text-gray-400 hover:text-red-500"><i class="bi bi-facebook text-xl"></i></a>
+                            <a href="#" class="text-gray-400 hover:text-red-500"><i class="bi bi-twitter text-xl"></i></a>
+                            <a href="#" class="text-gray-400 hover:text-red-500"><i class="bi bi-youtube text-xl"></i></a>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold mb-6">Shop</h3>
+                        <ul class="space-y-3">
+                            <li><a href="#shorts" class="text-gray-400 hover:text-red-500">Fight Shorts</a></li>
+                            <li><a href="#gloves" class="text-gray-400 hover:text-red-500">Gloves</a></li>
+                            <li><a href="#" class="text-gray-400 hover:text-red-500">New Arrivals</a></li>
+                            <li><a href="#" class="text-gray-400 hover:text-red-500">Best Sellers</a></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold mb-6">Support</h3>
+                        <ul class="space-y-3">
+                            <li><a href="#" class="text-gray-400 hover:text-red-500">Contact Us</a></li>
+                            <li><a href="#" class="text-gray-400 hover:text-red-500">FAQs</a></li>
+                            <li><a href="#" class="text-gray-400 hover:text-red-500">Shipping Policy</a></li>
+                            <li><a href="#" class="text-gray-400 hover:text-red-500">Returns & Exchanges</a></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold mb-6">Contact</h3>
+                        <ul class="space-y-3">
+                            <li class="flex items-start space-x-3">
+                                <i class="bi bi-geo-alt text-red-500"></i>
+                                <span class="text-gray-400">123 Fight Street, Las Vegas, NV 89101</span>
+                            </li>
+                            <li class="flex items-start space-x-3">
+                                <i class="bi bi-envelope text-red-500"></i>
+                                <span class="text-gray-400">support@hyperfightgear.com</span>
+                            </li>
+                            <li class="flex items-start space-x-3">
+                                <i class="bi bi-telephone text-red-500"></i>
+                                <span class="text-gray-400">+1 (800) 123-4567</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="mt-10 pt-8 border-t border-gray-900 flex flex-col md:flex-row justify-between items-center">
+                    <p class="text-gray-500 mb-4 md:mb-0">&copy; 2023 HYPER Fight Gear. All rights reserved.</p>
+                    <div class="flex space-x-6">
+                        <a href="#" class="text-gray-500 hover:text-red-500">Privacy Policy</a>
+                        <a href="#" class="text-gray-500 hover:text-red-500">Terms of Service</a>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // Product data
+        const products = [
+            { id: 1, category: "shorts", name: "Pro Series Fight Shorts", price: 89.99, colors: ["Black/Red", "Blue/White", "Green/Black"], image: "shorts-1.jpg", modelType: "shorts" },
+            { id: 2, category: "shorts", name: "Elite Competition Shorts", price: 99.99, colors: ["Black/Gold", "Red/White", "Blue/Black"], image: "shorts-2.jpg", modelType: "shorts" },
+            { id: 3, category: "shorts", name: "Performance Training Shorts", price: 74.99, colors: ["Black", "Red", "Blue", "White"], image: "shorts-3.jpg", modelType: "shorts" },
+            { id: 4, category: "gloves", name: "Professional Fight Gloves", price: 129.99, colors: ["Black/Red", "Blue/White", "Red/Black"], image: "gloves-1.jpg", modelType: "gloves" },
+            { id: 5, category: "gloves", name: "Training MMA Gloves", price: 89.99, colors: ["Black", "Red", "Blue"], image: "gloves-2.jpg", modelType: "gloves" },
+            { id: 6, category: "gloves", name: "Sparring Protective Gloves", price: 109.99, colors: ["Black/Red", "Blue/White", "Black/Blue"], image: "gloves-3.jpg", modelType: "gloves" }
+        ];
+
+        // Cart Management
+        let cart = [];
+        const cartCountElement = document.getElementById('cart-count');
+        const cartItemsContainer = document.getElementById('cart-items');
+        const cartSummary = document.getElementById('cart-summary');
+        const cartSubtotal = document.getElementById('cart-subtotal');
+        const cartTotal = document.getElementById('cart-total');
+        const cartEmptyMessage = document.querySelector('.cart-empty-message');
+
+        // Function to add product to cart
+        function addToCart(productId, quantity = 1, size = null, color = null) {
+            const product = products.find(p => p.id === productId);
+            
+            if (!product) return;
+            
+            // Check if product already exists in cart
+            const existingItemIndex = cart.findIndex(item => 
+                item.id === productId && 
+                item.size === size && 
+                item.color === color
+            );
+            
+            if (existingItemIndex > -1) {
+                // Update quantity if item already exists
+                cart[existingItemIndex].quantity += quantity;
+            } else {
+                // Add new item to cart
+                cart.push({
+                    id: product.id,
+                    name: product.name,
+                    price: product.price,
+                    quantity: quantity,
+                    size: size || 'M',
+                    color: color || product.colors[0]
+                });
+            }
+            
+            updateCartUI();
+            
+            // Show cart panel
+            document.querySelector('.cart-panel').classList.add('active');
+        }
+
+        // Function to remove product from cart
+        function removeFromCart(index) {
+            cart.splice(index, 1);
+            updateCartUI();
+        }
+
+        // Function to update cart UI
+        function updateCartUI() {
+            // Update cart count
+            cartCountElement.textContent = cart.reduce((total, item) => total + item.quantity, 0);
+            
+            // Clear cart items
+            cartItemsContainer.innerHTML = '';
+            
+            if (cart.length === 0) {
+                cartEmptyMessage.classList.remove('hidden');
+                cartSummary.classList.add('hidden');
+                return;
+            }
+            
+            cartEmptyMessage.classList.add('hidden');
+            cartSummary.classList.remove('hidden');
+            
+            // Calculate subtotal
+            const subtotal = cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+            const shipping = 9.99;
+            const total = subtotal + shipping;
+            
+            // Update subtotal and total
+            cartSubtotal.textContent = `$${subtotal.toFixed(2)}`;
+            cartTotal.textContent = `$${total.toFixed(2)}`;
+            
+            // Add cart items
+            cart.forEach((item, index) => {
+                const cartItem = document.createElement('div');
+                cartItem.className = 'flex items-center justify-between py-4 border-b border-gray-800';
+                cartItem.innerHTML = `
+                    <div class="flex items-center">
+                        <div class="w-16 h-16 bg-gray-800 rounded-md flex items-center justify-center mr-4">
+                            <i class="bi bi-${item.id <= 3 ? 'square' : 'hand-thumbs-up'} text-2xl text-red-500"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-medium">${item.name}</h4>
+                            <div class="text-sm text-gray-500">
+                                ${item.size ? `Size: ${item.size}` : ''} 
+                                ${item.color ? `Color: ${item.color}` : ''}
+                            </div>
+                            <div class="flex items-center mt-2">
+                                <button class="text-gray-500 px-2" onclick="updateItemQuantity(${index}, -1)">-</button>
+                                <span class="text-sm mx-2">${item.quantity}</span>
+                                <button class="text-gray-500 px-2" onclick="updateItemQuantity(${index}, 1)">+</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center">
+                        <span class="mr-4">$${(item.price * item.quantity).toFixed(2)}</span>
+                        <button class="text-gray-500 hover:text-red-500" onclick="removeFromCart(${index})">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                `;
+                cartItemsContainer.appendChild(cartItem);
+            });
+        }
+
+        // Function to update item quantity
+        function updateItemQuantity(index, change) {
+            const newQuantity = cart[index].quantity + change;
+            
+            if (newQuantity < 1) {
+                removeFromCart(index);
+                return;
+            }
+            
+            cart[index].quantity = newQuantity;
+            updateCartUI();
+        }
+
+        // Initialize Three.js Scene
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        // Add background particles
+        const particlesGeometry = new THREE.BufferGeometry();
+        const particlesCount = 2000;
+        const posArray = new Float32Array(particlesCount * 3);
+        
+        for (let i = 0; i < particlesCount * 3; i++) {
+            posArray[i] = (Math.random() - 0.5) * 10;
+        }
+        
+        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        
+        const particlesMaterial = new THREE.PointsMaterial({
+            size: 0.02,
+            color: 0xff0000,
+            transparent: true,
+            opacity: 0.5
+        });
+        
+        const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+        scene.add(particlesMesh);
+
+        // Add ambient light
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+
+        // Add directional light
+        const directionalLight = new THREE.DirectionalLight(0xff0000, 0.8);
+        directionalLight.position.set(5, 5, 5);
+        scene.add(directionalLight);
+
+        // Camera position
+        camera.position.z = 5;
+
+        // Animate background particles
+        function animateParticles() {
+            particlesMesh.rotation.x += 0.0005;
+            particlesMesh.rotation.y += 0.0003;
+        }
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            animateParticles();
+            renderer.render(scene, camera);
+        }
+        
+        animate();
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Create mock product renderers for the featured products
+        function setupFeaturedProductRenderer(canvasId, loaderId, modelType) {
+            const canvas = document.getElementById(canvasId);
+            const loader = document.getElementById(loaderId);
+            
+            if (!canvas) return;
+            
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ 
+                canvas: canvas,
+                antialias: true,
+                alpha: true 
+            });
+            
+            renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            
+            // Add lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(2, 2, 5);
+            scene.add(directionalLight);
+            
+            // Create a simple shape based on model type
+            let geometry, material, mesh;
+            
+            if (modelType === 'shorts') {
+                // Create a simplified shorts model
+                geometry = new THREE.BoxGeometry(0.8, 1, 0.5);
+                material = new THREE.MeshPhongMaterial({
+                    color: 0xff0000,
+                    emissive: 0x440000,
+                    specular: 0xff4444,
+                    shininess: 30
+                });
+            } else { // gloves
+                // Create a simplified gloves model
+                geometry = new THREE.SphereGeometry(0.7, 32, 32);
+                material = new THREE.MeshPhongMaterial({
+                    color: 0xff0000,
+                    emissive: 0x440000,
+                    specular: 0xff4444,
+                    shininess: 30
+                });
+            }
+            
+            mesh = new THREE.Mesh(geometry, material);
+            scene.add(mesh);
+            
+            // Position camera
+            camera.position.z = 3;
+            
+            // Create controls
+            const controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.rotateSpeed = 0.5;
+            controls.enableZoom = false;
+            
+            // Hide loader
+            setTimeout(() => {
+                loader.style.display = 'none';
+            }, 1500);
+            
+            // Animation
+            function animate() {
+                requestAnimationFrame(animate);
+                
+                // Auto-rotate when not being controlled
+                if (!controls.isActive) {
+                    mesh.rotation.y += 0.01;
+                }
+                
+                controls.update();
+                renderer.render(scene, camera);
+            }
+            
+            animate();
+            
+            // Handle resize
+            window.addEventListener('resize', () => {
+                const width = canvas.clientWidth;
+                const height = canvas.clientHeight;
+                camera.aspect = width / height;
+                camera.updateProjectionMatrix();
+                renderer.setSize(width, height, false);
+            });
+        }
+
+        // Initialize the product renderers
+        setupFeaturedProductRenderer('featured-product-canvas', 'featured-product-loader', 'shorts');
+        setupFeaturedProductRenderer('featured-gloves-canvas', 'featured-gloves-loader', 'gloves');
+
+        // Function to generate product cards
+        function generateProductCards() {
+            const productGrid = document.querySelector('#shop .grid');
+            const shortsContainer = document.getElementById('shorts-container');
+            const glovesContainer = document.getElementById('gloves-container');
+            
+            // Clear containers
+            productGrid.innerHTML = '';
+            shortsContainer.innerHTML = '';
+            glovesContainer.innerHTML = '';
+            
+            // Generate products for each container
+            products.forEach(product => {
+                const productCard = createProductCard(product);
+                
+                // Add to main product grid (featured products)
+                if (product.id <= 3) {
+                    productGrid.appendChild(productCard.cloneNode(true));
+                }
+                
+                // Add to category-specific container
+                if (product.category === 'shorts') {
+                    shortsContainer.appendChild(productCard);
+                } else if (product.category === 'gloves') {
+                    glovesContainer.appendChild(productCard);
+                }
+            });
+            
+            // Add event listeners to all Add to Cart buttons
+            document.querySelectorAll('.add-to-cart-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const productId = parseInt(this.getAttribute('data-product-id'));
+                    addToCart(productId);
+                });
+            });
+        }
+
+        // Function to create product card
+        function createProductCard(product) {
+            const productCard = document.createElement('div');
+            productCard.className = 'product-card bg-gray-900 rounded-lg p-4';
+            productCard.innerHTML = `
+                <div class="aspect-w-1 aspect-h-1 mb-4">
+                    <div class="w-full h-64 bg-gray-800 rounded-lg flex items-center justify-center overflow-hidden">
+                        <img src="https://firebasestorage.googleapis.com/v0/b/widecanvas-d0dd4.appspot.com/o/additional-images%2F${product.category === 'shorts' ? 'hyper%20.jpg' : 'hyper%20gloves.jpg'}?alt=media&token=${product.category === 'shorts' ? '95b4e7d5-323f-4eec-8775-4919168ec823' : 'a21bf3fc-b861-40ed-9705-ca92d91c45ba'}" 
+                             alt="${product.name}" 
+                             class="w-full h-full object-cover">
+                    </div>
+                </div>
+                <h3 class="text-xl font-bold">${product.name}</h3>
+                <div class="flex justify-between items-center mb-3">
+                    <p class="text-red-500 font-bold">$${product.price}</p>
+                    <div class="flex space-x-1">
+                        ${product.colors.map(color => {
+                            const [mainColor] = color.split('/');
+                            return `<div class="w-3 h-3 rounded-full" style="background-color: ${mainColor.toLowerCase()}"></div>`;
+                        }).join('')}
+                    </div>
+                </div>
+                <button class="add-to-cart-btn mt-2 w-full bg-red-600 text-white py-2 rounded hover:bg-red-700 transition" 
+                        data-product-id="${product.id}">
+                    Add to Cart
+                </button>
+            `;
+            return productCard;
+        }
+
+        // Initialize product cards
+        generateProductCards();
+
+        // Mobile menu toggle
+        document.getElementById('menu-btn').addEventListener('click', function() {
+            document.querySelector('.mobile-menu').classList.add('active');
+        });
+
+        document.getElementById('close-menu-btn').addEventListener('click', function() {
+            document.querySelector('.mobile-menu').classList.remove('active');
+        });
+
+        // Cart panel toggle
+        document.getElementById('cart-btn').addEventListener('click', function() {
+            document.querySelector('.cart-panel').classList.add('active');
+        });
+
+        document.getElementById('close-cart-btn').addEventListener('click', function() {
+            document.querySelector('.cart-panel').classList.remove('active');
+        });
+
+        // Search panel toggle
+        document.getElementById('search-btn').addEventListener('click', function() {
+            document.getElementById('search-panel').classList.remove('hidden');
+        });
+
+        document.getElementById('close-search-btn').addEventListener('click', function() {
+            document.getElementById('search-panel').classList.add('hidden');
+        });
+
+        // Checkout button
+        document.getElementById('checkout-btn').addEventListener('click', function() {
+            alert('Redirecting to checkout with Stripe...');
+            // In a real implementation, this would redirect to Stripe checkout
+        });
+
+        // Search functionality
+        document.getElementById('search-input').addEventListener('input', function(e) {
+            const searchValue = e.target.value.toLowerCase();
+            const searchResults = document.getElementById('search-results');
+            
+            // Clear previous results
+            searchResults.innerHTML = '';
+            
+            if (searchValue.length < 2) return;
+            
+            // Filter products based on search value
+            const filteredProducts = products.filter(product => 
+                product.name.toLowerCase().includes(searchValue) || 
+                product.category.toLowerCase().includes(searchValue)
+            );
+            
+            if (filteredProducts.length === 0) {
+                searchResults.innerHTML = '<p class="text-center text-gray-500 py-4">No products found</p>';
+                return;
+            }
+            
+            // Create search result items
+            filteredProducts.forEach(product => {
+                const resultItem = document.createElement('div');
+                resultItem.className = 'flex items-center p-3 hover:bg-gray-900 rounded cursor-pointer';
+                resultItem.innerHTML = `
+                    <div class="w-12 h-12 bg-gray-800 rounded-md flex items-center justify-center mr-4">
+                        <i class="bi bi-${product.category === 'shorts' ? 'square' : 'hand-thumbs-up'} text-red-500"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-medium">${product.name}</h4>
+                        <p class="text-sm text-red-500">$${product.price}</p>
+                    </div>
+                `;
+                resultItem.addEventListener('click', function() {
+                    addToCart(product.id);
+                    document.getElementById('search-panel').classList.add('hidden');
+                });
+                searchResults.appendChild(resultItem);
+            });
+        });
+
+        // Size options selection
+        document.querySelectorAll('.size-option, .weight-option').forEach(button => {
+            button.addEventListener('click', function() {
+                // Remove active class from all siblings
+                this.parentNode.querySelectorAll('button').forEach(btn => {
+                    btn.classList.remove('border-red-500');
+                });
+                
+                // Add active class to clicked button
+                this.classList.add('border-red-500');
+            });
+        });
+
+        // Parallax effect for background images
+        const parallaxElements = document.querySelectorAll('.parallax-bg');
+        
+        window.addEventListener('scroll', function() {
+            parallaxElements.forEach(element => {
+                const scrollPosition = window.pageYOffset;
+                const elementPosition = element.parentNode.offsetTop;
+                const distance = scrollPosition - elementPosition;
+                
+                if (distance > -window.innerHeight && distance < window.innerHeight) {
+                    // Apply parallax effect only when element is in view
+                    element.style.transform = `translateY(${distance * 0.2}px)`;
+                }
+            });
+        });
+
+        // Add MongoDB operations for cart items (simulated)
+        async function saveCartItem(userId, item) {
+            try {
+                const response = await fetch('https://r0c8kgwocscg8gsokogwwsw4.zetaverse.one/mongodb', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer 7QodXot7SVf5Zlth56LjEkha0wA3',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        appSlug: 'hyper-store-123456',
+                        action: 'create',
+                        collection: 'cart_items',
+                        data: {
+                            userId: userId,
+                            productId: item.id,
+                            name: item.name,
+                            price: item.price,
+                            quantity: item.quantity,
+                            size: item.size,
+                            color: item.color,
+                            createdAt: new Date().toISOString()
+                        }
+                    })
+                });
+                
+                const result = await response.json();
+                return result;
+            } catch (error) {
+                console.error('Error saving cart item:', error);
+                return null;
+            }
+        }
+
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                const targetId = this.getAttribute('href');
+                if (targetId === '#') return;
+                
+                const targetElement = document.querySelector(targetId);
+                if (targetElement) {
+                    window.scrollTo({
+                        top: targetElement.offsetTop - 80,
+                        behavior: 'smooth'
+                    });
+                    
+                    // Close mobile menu if open
+                    document.querySelector('.mobile-menu').classList.remove('active');
+                }
+            });
+        });
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
